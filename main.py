@@ -46,6 +46,14 @@ class Config:
             f"超量階級 {_fmt(self.xyz_ranks)}  ·  融合等級 {_fmt(self.fusion_levels)}"
         )
 
+    def b_bounds(self) -> tuple[int, int]:
+        """可作為目標的 b 範圍。因為 b = x + y，所以最小／最大值就是
+        最小階級+最小等級、最大階級+最大等級。超出此範圍必定無法施放。"""
+        return (
+            min(self.xyz_ranks) + min(self.fusion_levels),
+            max(self.xyz_ranks) + max(self.fusion_levels),
+        )
+
 
 @dataclass
 class Solution:
@@ -242,25 +250,33 @@ def main() -> None:
             "找出能滿足卡片效果、[bold green]除外對方場上所有卡片[/bold green]的\n"
             "超量階級（[cyan]x[/cyan]）與融合等級（[cyan]y[/cyan]）。\n\n"
             "  [dim]2x + y = a[/dim]   a = 雙方場上與手牌的卡片總數\n"
-            "  [dim] x + y = b[/dim]   b = 對方某隻怪獸的等級",
+            "  [dim] x + y = b[/dim]   b = 對方某隻怪獸的等級\n\n"
+            "可連續計算多次；按 [bold]Ctrl+C[/bold] 離開。",
             border_style="magenta",
             expand=False,
         )
     )
 
     config = get_config(force_setup)
+    lo, hi = config.b_bounds()
     console.print(f"[dim]你的額外牌組：[/dim]{config.summary()}")
-    console.print("[dim]（編輯 lianli_config.toml 或加上 --setup 以變更）[/dim]\n")
+    console.print(
+        f"[dim]可鎖定的對方怪獸等級 [/dim][cyan]b[/cyan][dim]：[/dim]"
+        f"[bold]{lo} ~ {hi}[/bold][dim]（超出此範圍必定無法施放連慄炮）[/dim]"
+    )
+    console.print("[dim]（編輯 lianli_config.toml 或加上 --setup 以變更）[/dim]")
 
-    a = ask_int("雙方場上與手牌的卡片總數 [cyan]a[/cyan]", minimum=0)
-    solutions = [solve(a, b, config) for b in ask_b_values()]
+    while True:
+        console.rule("[dim]新的計算[/dim]")
+        a = ask_int("雙方場上與手牌的卡片總數 [cyan]a[/cyan]", minimum=0)
+        solutions = [solve(a, b, config) for b in ask_b_values()]
 
-    console.print()
-    console.print(results_table(a, solutions))
+        console.print()
+        console.print(results_table(a, solutions))
 
 
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt, EOFError:
-        console.print("\n[dim]已取消。[/dim]")
+        console.print("\n[dim]已離開。[/dim]")
