@@ -1,24 +1,3 @@
-"""連慄炮 方程式求解器 — 計算「除外對方所有卡片」連段的 CLI 工具。
-
-當以下兩條方程式同時成立時，卡片效果即可發動：
-
-    2x + y = a      （x = 你的超量怪獸的階級）
-     x + y = b      （y = 你的融合怪獸的等級）
-
-    a = 雙方場上與手牌的卡片總數
-    b = 對方場上某隻怪獸的等級
-
-兩條方程式、兩個未知數 => 每個 b 都只有唯一的 (x, y)：
-
-    x = a - b
-    y = 2b - a
-
-但限制在於：你只能做出額外牌組裡實際擁有的超量階級與融合等級。
-首次執行時，工具會詢問這些資料，並儲存到可讀的設定檔
-（lianli_config.toml），讓往後的可行性判斷符合你真實的牌組。
-你可以隨時編輯該檔案，或加上 `--setup` 重新設定。
-"""
-
 from __future__ import annotations
 
 import sys
@@ -47,8 +26,6 @@ class Config:
         )
 
     def b_bounds(self) -> tuple[int, int]:
-        """可作為目標的 b 範圍。因為 b = x + y，所以最小／最大值就是
-        最小階級+最小等級、最大階級+最大等級。超出此範圍必定無法施放。"""
         return (
             min(self.xyz_ranks) + min(self.fusion_levels),
             max(self.xyz_ranks) + max(self.fusion_levels),
@@ -79,11 +56,7 @@ def solve(a: int, b: int, config: Config) -> Solution:
     return Solution(b=b, x=a - b, y=2 * b - a, config=config)
 
 
-# --------------------------------------------------------------------------- #
-# 輸入解析／提示
-# --------------------------------------------------------------------------- #
 def _fmt(values: list[int]) -> str:
-    """將排序後的整數清單精簡顯示，連續的數值會合併成範圍。"""
     if not values:
         return "（無）"
     parts: list[str] = []
@@ -99,7 +72,6 @@ def _fmt(values: list[int]) -> str:
 
 
 def parse_int_set(raw: str) -> list[int]:
-    """解析 '1-5'、'4,6,8'、'1-3 5 7-8' -> 排序後的唯一整數。失敗時拋出 ValueError。"""
     out: set[int] = set()
     for token in raw.replace(",", " ").split():
         if "-" in token:
@@ -164,12 +136,9 @@ def ask_b_values() -> list[int]:
         return values
 
 
-# --------------------------------------------------------------------------- #
-# 設定檔的存取
-# --------------------------------------------------------------------------- #
 def write_config(config: Config) -> None:
     text = (
-        "# 連慄炮 方程式求解器 — 你的額外牌組。\n"
+        "# 連慄炮 方程式求解器 - 你的額外牌組。\n"
         "# 列出你實際能召喚的超量階級與融合等級。\n"
         "# 可自由編輯（整數），然後重新執行工具。或加上 --setup。\n"
         "\n"
@@ -213,15 +182,10 @@ def get_config(force_setup: bool) -> Config:
     try:
         return load_config()
     except tomllib.TOMLDecodeError, KeyError, ValueError, TypeError:
-        console.print(
-            f"[yellow]無法讀取 {CONFIG_PATH.name} — 讓我們重新設定。[/yellow]\n"
-        )
+        console.print(f"[yellow]無法讀取 {CONFIG_PATH.name}，將重新設定。[/yellow]\n")
         return first_time_setup()
 
 
-# --------------------------------------------------------------------------- #
-# 輸出
-# --------------------------------------------------------------------------- #
 def results_table(a: int, solutions: list[Solution]) -> Table:
     table = Table(title=f"a = {a} 的解", title_style="bold")
     table.add_column("b", justify="right", style="cyan")
